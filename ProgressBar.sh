@@ -51,7 +51,7 @@ ProgressBar.init() {
   }
 
   cleanup() {
-    printf '\r\e[KConcluído [100%%]'
+    printf '\r\e[KConcluído [100%%]\n'
     tput cnorm
     rm -fr $tmp
   }
