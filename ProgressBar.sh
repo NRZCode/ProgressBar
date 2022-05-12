@@ -78,14 +78,14 @@ ProgressBar.init() {
     cols=${width:-$COLUMNS}
     p=$((partial*100/total))
     percento=$((p > 100 ? 100 : p))
-    offset=$((cols-${#msg}-11))
+    offset=$((cols-${#msg}-13))
 
     printf -v pad '%*s' $((percento*offset/100))
     bar_on=${pad// /$bar_char_on}
     printf -v pad '%*s' $((offset-${#bar_on}))
     bar_off=${pad// /$bar_char_off}
 
-    printf "$bar_format\r" "$msg" $percento $bar_on $bar_off
+    printf "$bar_format\r" "$msg" $percento "$4" $bar_on $bar_off
   }
 
   ProgressBar.run() {
@@ -96,7 +96,8 @@ ProgressBar.init() {
     total=${total:-100}
     forward=${forward:-$forward_default}
     tput civis
-    while ps -p $pidmain > /dev/null; do
+    while :; do
+      ps -p $pidmain > /dev/null || { cleanup; break; }
       if [[ $forward != 'zero' ]]; then
         nivel=$((++i % forward ? nivel : nivel+1))
       fi
@@ -109,7 +110,8 @@ ProgressBar.init() {
       fi
       msg="${str:-$msg}"
 
-      ProgressBar.print "$nivel" "$total" "$msg"
+      ((i % 7)) || s=$((s < ${#spinner_chars}-1 ? ++s : 0))
+      ProgressBar.print "$nivel" "$total" "$msg" "${spinner_chars:s:1}"
     done
   }
 
@@ -132,7 +134,9 @@ ProgressBar.init() {
   bar_progress_fgcolor='\e[1;37m'
   bar_progress_bgcolor=''
   color_reset='\e[m'
-  bar_format="${bar_text_fgcolor}${bar_text_bgcolor}%s: [%3d%%]${color_reset} ${bar_progress_fgcolor}${bar_progress_bgcolor}[%s%s]${color_reset}"
+  # Progress: [ 67%] ⣾ [#####################................] [ETA 2m37s]
+  # bar_fmt="${text_description}${percentage}${spinner}${progress}${eta}"
+  bar_format="${bar_text_fgcolor}${bar_text_bgcolor}%s: [%3d%%]${color_reset} %s ${bar_progress_fgcolor}${bar_progress_bgcolor}[%s%s]${color_reset}"
   forward_default=1000
   declare -A speed=(
     [fast]=20
@@ -202,6 +206,7 @@ ProgressBar.main() {
 
 script=$(realpath $BASH_SOURCE)
 dirname=${script%/*}
-[ -r "$dirname/.env" ] && source "$dirname/.env"
-[ -r "$HOME/.progressbarrc" ] && source "$HOME/.progressbarrc"
+spinner_chars='⠁⠁⠉⠙⠚⠒⠂⠂⠒⠲⠴⠤⠄⠄⠤⠠⠠⠤⠦⠖⠒⠐⠐⠒⠓⠋⠉⠈⠈'
+[[ -f $PROGRESSBARRC ]] && source "$PROGRESSBARRC"
+[[ -r "$HOME/.progressbarrc" ]] && source "$HOME/.progressbarrc"
 [[ $BASH_SOURCE == $0 ]] && ProgressBar.main "$@"
